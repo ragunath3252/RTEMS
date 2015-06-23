@@ -46,6 +46,7 @@ static struct omap_intr omap_intr = {
 static int irqs_enabled[BSP_INTERRUPT_VECTOR_MAX+1];
 
 volatile static int level = 0;
+extern int ragu;
 
 void bsp_interrupt_dispatch(void)
 {
@@ -54,7 +55,11 @@ void bsp_interrupt_dispatch(void)
   int irq;
   irq = reg & OMAP3_INTR_ACTIVEIRQ_MASK;
 
+  if(ragu)
+  printk("\n\rirq %d",irq);
+
   if(!irqs_enabled[irq]) {
+	printk("\n\rspurious");
 	/* Ignore spurious interrupt */
   } else {
     bsp_interrupt_vector_disable(irq);
@@ -72,7 +77,7 @@ void bsp_interrupt_dispatch(void)
     bsp_interrupt_handler_dispatch(irq);
 
     _ARMV4_Status_restore(psr);
-
+    if(!(irq == 40 || irq == 41 || irq == 42 || irq == 43))
     bsp_interrupt_vector_enable(irq);
   }
 }
@@ -94,6 +99,9 @@ rtems_status_code bsp_interrupt_vector_enable(rtems_vector_number vector)
   uint32_t mask, cur;
   uint32_t mir_reg = get_mir_reg(vector, &mask);
 
+//  if((vector == 40 || vector == 41 || vector == 42 || vector == 43))
+//  printk("\n\rENABLE %d",vector);
+  irqs_enabled[vector] = 1;
   cur = mmio_read(omap_intr.base + mir_reg);
   mmio_write(omap_intr.base + mir_reg, cur & ~mask);
   flush_data_cache();
@@ -107,6 +115,9 @@ rtems_status_code bsp_interrupt_vector_disable(rtems_vector_number vector)
 {
   uint32_t mask, cur;
   uint32_t mir_reg = get_mir_reg(vector, &mask);
+
+  //if((vector == 40 || vector == 41 || vector == 42 || vector == 43))
+  //printk("\n\rDISABLE %d",vector);
 
   cur = mmio_read(omap_intr.base + mir_reg);
   mmio_write(omap_intr.base + mir_reg, cur | mask);
