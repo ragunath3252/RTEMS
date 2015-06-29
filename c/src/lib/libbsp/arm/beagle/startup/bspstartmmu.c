@@ -44,10 +44,16 @@ BSP_START_TEXT_SECTION void beagle_setup_mmu_and_cache(void)
 {
   /* turn mmu off first in case it's on */
   uint32_t ctrl = arm_cp15_start_setup_mmu_and_cache(
-    ARM_CP15_CTRL_M | ARM_CP15_CTRL_A | ARM_CP15_CTRL_I | ARM_CP15_CTRL_C,	/* clear - mmu off */
+#if BBB_CACHE_DISABLE
+    /* clear - mmu off & disable cache */
+    ARM_CP15_CTRL_M | ARM_CP15_CTRL_A | ARM_CP15_CTRL_I | ARM_CP15_CTRL_C,
+#else
+    ARM_CP15_CTRL_M | ARM_CP15_CTRL_A,	/* clear - mmu off */
+#endif /* BBB_CACHE_DISABLE */
     ARM_CP15_CTRL_AFE | ARM_CP15_CTRL_Z
   );
 
+#if BBB_CACHE_DISABLE
   arm_cp15_start_setup_translation_table(
     (uint32_t *) bsp_translation_table_base,
     ARM_MMU_DEFAULT_CLIENT_DOMAIN,
@@ -57,4 +63,13 @@ BSP_START_TEXT_SECTION void beagle_setup_mmu_and_cache(void)
 
   ctrl |= ARM_CP15_CTRL_M;
   arm_cp15_set_control(ctrl);
+#else
+  arm_cp15_start_setup_translation_table_and_enable_mmu_and_cache(
+    ctrl,
+    (uint32_t *) bsp_translation_table_base,
+    ARM_MMU_DEFAULT_CLIENT_DOMAIN,
+    &beagle_mmu_config_table[0],
+    RTEMS_ARRAY_SIZE(beagle_mmu_config_table)
+  );
+#endif /* BBB_CACHE_DISABLE */
 }
